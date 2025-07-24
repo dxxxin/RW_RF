@@ -103,10 +103,10 @@ def find_best_threshold_ROC(y_test, final_prediction):
 # Graph construction
 G = nx.Graph()
 
-df_genes = pd.read_excel("D:\\单个节点数据.xlsx", sheet_name='gene')
-df_diss = pd.read_excel("D:\\单个节点数据.xlsx", sheet_name='dis')
-df_herbs = pd.read_excel('D:\\单个节点数据.xlsx', sheet_name='herb')
-df_ingredients = pd.read_excel('D:\\单个节点数据.xlsx', sheet_name='ingredient')
+df_genes = pd.read_excel("单个节点数据.xlsx", sheet_name='gene')
+df_diss = pd.read_excel("单个节点数据.xlsx", sheet_name='dis')
+df_herbs = pd.read_excel('单个节点数据.xlsx', sheet_name='herb')
+df_ingredients = pd.read_excel('单个节点数据.xlsx', sheet_name='ingredient')
 
 # Add nodes
 for gene in df_genes['gene']:
@@ -121,12 +121,12 @@ for ingredient in df_ingredients['ingredient']:
 print(f"Number of nodes: {G.number_of_nodes()}")
 
 # Read edge data and add edges
-df_dis_gene_edges = pd.read_excel("D:\\节点数据12.1.xlsx", sheet_name='dis-gene')
-df_dis_herb_edges = pd.read_excel('D:\\节点数据12.1.xlsx', sheet_name='dis-herb')
-df_gene_gene_edges = pd.read_excel('D:\\节点数据12.1.xlsx', sheet_name='gene-gene')
-df_herb_gene_edges = pd.read_excel('D:\\节点数据12.1.xlsx', sheet_name='herb-gene')
-df_ingredient_gene_edges = pd.read_excel('D:\\节点数据12.1.xlsx', sheet_name='ingredient-gene')
-df_ingredient_herb_edges = pd.read_excel('D:\\节点数据12.1.xlsx', sheet_name='herb-ingredient')
+df_dis_gene_edges = pd.read_excel("节点数据12.1.xlsx", sheet_name='dis-gene')
+df_dis_herb_edges = pd.read_excel('节点数据12.1.xlsx', sheet_name='dis-herb')
+df_gene_gene_edges = pd.read_excel('节点数据12.1.xlsx', sheet_name='gene-gene')
+df_herb_gene_edges = pd.read_excel('节点数据12.1.xlsx', sheet_name='herb-gene')
+df_ingredient_gene_edges = pd.read_excel('节点数据12.1.xlsx', sheet_name='ingredient-gene')
+df_ingredient_herb_edges = pd.read_excel('节点数据12.1.xlsx', sheet_name='herb-ingredient')
 for index, row in df_dis_gene_edges.iterrows():
     G.add_edge(str(row['dis']), str(row['gene']))
 for index, row in df_dis_herb_edges.iterrows():
@@ -165,7 +165,7 @@ embeddings = apply_metapath2vec_concurrent(G, metapaths)
 print(f"Number of embeddings: {len(embeddings)}")
 
 # 读取二值化矩阵
-file_path = "D:\\二值化矩阵_行列名.xlsx"
+file_path = "二值化矩阵_行列名.xlsx"
 binary_matrix = pd.read_excel(file_path, index_col=0)
 
 # 将行索引和列转换为字符串
@@ -181,6 +181,6 @@ dis_vectors = {str(node): embeddings[str(node)] for node in binary_matrix.column
 ingredient_df = pd.DataFrame.from_dict(ingredient_vectors, orient='index')
 dis_df = pd.DataFrame.from_dict(dis_vectors, orient='index')
 
-ingredient_df.to_excel("D:\\metapath2vec\\ingredient_vectors64.xlsx")
-dis_df.to_excel("D:\\metapath2vec\\dis_vectors64.xlsx")
+ingredient_df.to_excel("ingredient_vectors64_metapath.xlsx")
+dis_df.to_excel("dis_vectors64_metapath.xlsx")
 

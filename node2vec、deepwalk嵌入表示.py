@@ -9,6 +9,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.metrics import classification_report, roc_auc_score, average_precision_score, roc_curve
 from node2vec import Node2Vec
+from gensim.models import Word2Vec
 
 def find_best_threshold_ROC(y_test, final_prediction):
     fpr, tpr, thresholds = roc_curve(y_test, final_prediction)
@@ -35,6 +36,54 @@ def apply_node2vec(G, p=1, q=1, num_workers=2):
     with ThreadPoolExecutor(max_workers=num_workers) as executor:
         future = executor.submit(apply_node2vec_concurrent, G, p, q)
         embeddings = future.result()
+    return embeddings
+
+
+def random_walk(graph, start_node, walk_length):
+    walk = [str(start_node)]
+    while len(walk) < walk_length:
+        current_node = walk[-1]
+        neighbors = list(graph.neighbors(current_node))
+        if len(neighbors) == 0:
+            break
+        next_node = random.choice(neighbors)
+        walk.append(str(next_node))
+    return walk
+
+# Step 3: 执行多次随机游走
+def generate_walks(graph, num_walks, walk_length):
+    walks = []
+    nodes = list(graph.nodes())
+    for _ in range(num_walks):
+        random.shuffle(nodes)
+        for node in nodes:
+            walks.append(random_walk(graph, node, walk_length))
+    return walks
+
+# Step 4: 训练 Word2Vec 模型
+def train_deepwalk(graph, walk_length=10, num_walks=50, dimensions=64, window_size=2, workers=4, epochs=5):
+    walks = generate_walks(graph, num_walks, walk_length)
+    model = Word2Vec(
+        sentences=walks,
+        vector_size=dimensions,
+        window=window_size,
+        min_count=0,
+        sg=1,         # 使用 skip-gram
+        workers=workers,
+        epochs=epochs
+    )
+    return model
+
+# Step 5: 获取嵌入向量
+def get_node_embeddings(model):
+    embeddings = {}
+    for node in model.wv.index_to_key:
+        embeddings[node] = model.wv[node]
+    return embeddings
+
+def apply_deepwalk(G):
+    model = train_deepwalk(G)
+    embeddings = get_node_embeddings(model)
     return embeddings
 
 def main():
@@ -74,9 +123,11 @@ def main():
     print(f"Number of edges: {G.number_of_edges()}")
 
     # 读取嵌入
-    embeddings = apply_node2vec(G, p=0.5, q=4)
-    print(f"Number of embeddings: {len(embeddings)}")
+    #embeddings = apply_node2vec(G, p=0.5, q=4)
+    embeddings = apply_deepwalk(G)
 
+    #print(f"Number of embeddings: {len(embeddings)}")
+    #print(embeddings[0])
     file_path = "二值化矩阵_行列名.xlsx"
     binary_matrix = pd.read_excel(file_path, index_col=0)
 
@@ -85,19 +136,22 @@ def main():
     binary_matrix.columns = binary_matrix.columns.map(str)
 
     # 打印 binary_matrix 中的索引和列名称
-    print("Binary Matrix Index (Ingredients):", binary_matrix.index.tolist())
-    print("Binary Matrix Columns (Diseases):", binary_matrix.columns.tolist())
+    #print("Binary Matrix Index (Ingredients):", binary_matrix.index.tolist())
+    #print("Binary Matrix Columns (Diseases):", binary_matrix.columns.tolist())
 
     # 确认索引和列中数据与嵌入向量的匹配
     ingredient_vectors = {str(node): embeddings[str(node)] for node in binary_matrix.index if str(node) in embeddings}
     dis_vectors = {str(node): embeddings[str(node)] for node in binary_matrix.columns if str(node) in embeddings}
 
+    print(ingredient_vectors)
     # 将嵌入向量保存为 Excel 文件
     ingredient_df = pd.DataFrame.from_dict(ingredient_vectors, orient='index')
+    #ingredient_df = ingredient_df.rename(columns={0: 'ingredient'})
     dis_df = pd.DataFrame.from_dict(dis_vectors, orient='index')
+    #dis_df = dis_df.rename(columns={0: 'dis'})
 
-    ingredient_df.to_excel("ingredient_vectors.xlsx")
-    dis_df.to_excel("dis_vectors.xlsx")
+    ingredient_df.to_excel("ingredient_vectors_deepwalk.xlsx")
+    dis_df.to_excel("dis_vectors_deepwalk.xlsx")
 
 if __name__ == "__main__":
     main()
